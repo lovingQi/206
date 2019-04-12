@@ -277,6 +277,9 @@ def fmdm():
                         hgb_wb.truncate()
                     if(now>=freq_list.size):
                         now=0
+						for sd in thd:
+							if(thd[sd].isAlive()):
+								thd[sd].join()
                         freq_list=np.array([])
                         cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
                         time.sleep(5)
@@ -293,9 +296,7 @@ def fmdm():
                     count=0
                     Frequency_Window.delete(0,"end")
                     Frequency_Window.insert("end",'开始扫描频点 :'+str(freq_list[now])+'MHz')
-                for sd in thd:
-                        if(thd[sd].isAlive()):
-                            thd[sd].join()
+                
                 #xiugaide==================================================
                 rec=wave.open('fm0.wav','wb')
                 rec.setnchannels(1)
