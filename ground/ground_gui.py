@@ -277,9 +277,9 @@ def fmdm():
                         hgb_wb.truncate()
                     if(now>=freq_list.size):
                         now=0
-						for sd in thd:
-							if(thd[sd].isAlive()):
-								thd[sd].join()
+                        for sd in thd:
+                            if(thd[sd].isAlive()):
+                                thd[sd].join()
                         freq_list=np.array([])
                         cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
                         time.sleep(5)
