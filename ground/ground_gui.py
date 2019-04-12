@@ -1,23 +1,21 @@
-import threading
 import tkinter.messagebox
 import tkinter as tk
-import serial.tools.list_ports
 from tkinter import ttk
 from tkinter import scrolledtext
+import serial.tools.list_ports
 import wave
 import pyaudio 
 import os
 import os.path
 import codecs
-import numpy as np
 import pandas
 import jieba
-from aip import AipSpeech
 import socket
+import time
+import numpy as np
+from aip import AipSpeech
 from threading import Thread
-import time
 import matplotlib.pyplot as plt
-import time
 #初始化
 APP_ID = '10836826'
 API_KEY = 'YvPbyRbqvwt0VDq8RK0GXRxF'
@@ -30,6 +28,7 @@ CMDDST=('192.168.3.120',10102)
 cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 loc=[]
 freq_list=np.array([88.5,93.7,101.1])
+current_freq=88.5#dang qian pin lv
 scan=0
  #xiugaide==================================================
 #窗口程序
@@ -79,17 +78,17 @@ switch4.place(x = 760, y = 460, width = 220)
 switch5 = tk.LabelFrame(GUI,text = "",padx = 10,pady = 10)
 switch5.place(x = 760, y = 510, width = 220)
 #语音识别
-def reco(fname,client):
+def reco(fname,client,c_freq):
     with open(fname, 'rb') as fp:
         result=client.asr(fp.read(), 'wav', 16000, {'dev_pid': 1537,})
         if result['err_no']==0:
-                with open ("E:\\python\\hgb\\黑广播.txt",'w',encoding = 'utf-8') as hgb_wb:
+                with open ("黑广播.txt",'w',encoding = 'utf-8') as hgb_wb:
                     hgb_wb.write(result['result'][0])
-                with open ("E:\\python\\hgb\\黑广播.txt",'r',encoding = 'utf-8') as hgb_wb:
+                with open ("黑广播.txt",'r',encoding = 'utf-8') as hgb_wb:
                     lines = hgb_wb.readlines()
                 lines = ''.join(lines)
                 #切割词组，并过滤停用词
-                stoplist = codecs.open('E:\\python\\stopwords.txt','r',encoding='utf8').readlines()
+                stoplist = codecs.open('stopwords.txt','r',encoding='utf8').readlines()
                 stoplist = set(w.strip() for w in stoplist)#读取停用词表
                 segment = []
                 segs = jieba.cut(lines)
@@ -105,7 +104,7 @@ def reco(fname,client):
                 c = c.sort_values(by = ["计数"],ascending = False)#对计数次数排序
                 segStat = c.reset_index()#还原segStat矩阵索引
                 #关键词提取
-                f = open('关键词库.txt','r',encoding='utf-8-sig')
+                f = open('关键词.txt','r',encoding='utf-8-sig')
                 liness = f.readlines()#读取文本中全部行
                 line_list = []
                 for line in liness:
@@ -120,7 +119,7 @@ def reco(fname,client):
                                 ciku.append(keywords[i])
                         i +=1
                 times = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
-                Information_Window.insert("end",'['+str(times)+'频率:'+str(freq_list[now])+'MHz'+']'+str(lines) + '\n')# 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
+                Information_Window.insert("end",'['+str(times)+'频率:'+str(c_freq)+'MHz'+']'+str(lines) + '\n')# 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Information_Window.see("end")
                 Guanjianci_Window.insert("end",str(segStat) + '\n') # 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Guanjianci_Window.see("end") # 此处为显示操作信息窗口进度条末尾内容，以上两行
@@ -130,7 +129,7 @@ def reco(fname,client):
                         while i<m:
                                 fd=Thread(target=showin,args= (ciku[i],))
                                 fd.start()
-                                Gj_Window.insert("end",'['+str(times)+'频率:'+str(freq_list[now])+'MHz'+']'+'搜索到关键词：'+str(ciku[i])+'\n')
+                                Gj_Window.insert("end",'['+str(times)+'频率:'+str(c_freq)+'MHz'+']'+'搜索到关键词：'+str(ciku[i])+'\n')
                                 Gj_Window.see("end")
                                 i +=1
         else:
@@ -138,9 +137,12 @@ def reco(fname,client):
 			
 def WriteData():
     global DataSend
+    global current_freq
     DataSend = EntrySend.get() # 读取当前文本框的内容保存到字符串变量DataSend
     a=DataSend.replace('.','')
+    current_freq=(int(a)/10)
     cmd.sendto((int(a)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
+    
 tk.Button(Send, text="设置", command=WriteData).grid(pady=1, sticky=tk.E)
 def showin(s):
     tkinter.messagebox.showinfo("提示","搜索到关键词:"+str(s))
@@ -148,13 +150,12 @@ def fftp():
     #xiugaide==================================================
     global loc
     global freq_list
+    
      #xiugaide==================================================
     ft = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #建立一个基于TCP的Socket
     ft.connect(('192.168.3.120',10103))
     print('fft connect successful')
     x=[]
-    
-    #plt.axis([0, 8192, 0, 500000000])
     xz = np.linspace(88, 118, 8192) #X axis data
     time=0
     temp_list=[]
@@ -214,6 +215,7 @@ def fftp():
 def fmdm():
     global scan
     global freq_list,now
+    global current_freq
     #声卡输出流初始化
     p = pyaudio.PyAudio()
     stream = p.open(format = p.get_format_from_width(2),channels = 1,rate = 48000, output = True)
@@ -268,12 +270,12 @@ def fmdm():
             if (state>=dem_time):
                 if(thd[state].isAlive()):
                     thd[state].join()
-                thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),))
+                thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),current_freq,))
                 thd[state].start()
                  #xiugaide==================================================
                 if(1==scan):
                     now += 1
-                    with open ("E:\\python\\hgb\\黑广播.txt",'w',encoding = 'utf-8') as hgb_wb:
+                    with open ("黑广播.txt",'w',encoding = 'utf-8') as hgb_wb:
                         hgb_wb.truncate()
                     if(now>=freq_list.size):
                         now=0
@@ -294,8 +296,9 @@ def fmdm():
                         data=st.recv(6)
                         count +=1
                     count=0
-                    Frequency_Window.delete(0,"end")
-                    Frequency_Window.insert("end",'开始扫描频点 :'+str(freq_list[now])+'MHz')
+                    current_freq=freq_list[now]
+                Frequency_Window.delete(0,"end")
+                Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
                 
                 #xiugaide==================================================
                 rec=wave.open('fm0.wav','wb')
@@ -304,7 +307,7 @@ def fmdm():
                 rec.setframerate(16000)
                 state=0
             else:
-                thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),))
+                thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),current_freq,))
                 thd[state].start()
                 
                 if(thd[state+1].isAlive()):
