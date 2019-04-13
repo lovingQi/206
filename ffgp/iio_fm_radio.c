@@ -226,9 +226,9 @@ int fmdm(int* life,int* dst,int cnum)
 			break;
 		}
 	}
-
+	
+	set_dev_paths("cf-ad9361-lpc");
 	write_devattr_int("buffer/enable", 0);
-
 	fprintf(stderr, "Stopping FM modulation\n");
 
 	for (i = 0; i < req.count; i++)

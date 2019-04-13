@@ -1,10 +1,7 @@
 #include "main.h"
 #include "unistd.h"
 //
-int fmsock,fmdst,fftsock,fftdst;
-int sin_size;
-struct sockaddr_in my_addr,fft_addr;
-struct sockaddr_in their_addr,fft_their;
+
 
 
 int main()
@@ -32,7 +29,11 @@ int main()
 	
 	thread_cmd = pthread_create(&thread_command, NULL, (void *)&control_process, (void *)arg);
 	thread_cli = pthread_create(&thread_client, NULL, (void *)&get_client, (void *)arg);
-	
+	#ifdef MY_DEBUG
+	thread_dbg = pthread_create(&thread_debug, NULL, (void *)&my_debug, (void *)arg);
+	if(thread_dbg<0)
+		printf("create debug thread failed\n");
+	#denif
 
 	while(arg[0])
 	{
@@ -61,9 +62,20 @@ void gsend(int* dst,void* val,int len,int num)
 	}
 }
 
-void get_client()
+
+void my_debug(void *arg)
 {
-	while (1&&fft_cli_num<MAX_CLI&&fm_cli_num<MAX_CLI)
+	while (((int *)arg)[0])
+	{
+		printf("\tmain life :%d sub life %d\n",((int *)arg)[0],((int *)arg)[1]);
+		sleep(2);
+	}
+	exit(0);
+}
+
+void get_client(void *arg)
+{
+	while (((int *)arg)[0]&&fft_cli_num<MAX_CLI&&fm_cli_num<MAX_CLI)
 	{
 		printf("waitting for other client %d  %d\n",fft_cli_num,fm_cli_num);
         fmdst=accept(fmsock,(struct sockaddr*)&their_addr,&sin_size);
@@ -84,10 +96,8 @@ void get_client()
 }
 void control_process(void *arg)
 {
-    pthread_t thread_client;
     // create socket project
     int sockcmd=socket(AF_INET,SOCK_DGRAM,0);
-    int thread_cli;
     // set socket attr
     struct sockaddr_in addr;
     addr.sin_family =AF_INET;
@@ -126,7 +136,6 @@ void control_process(void *arg)
 			case 6:((int *)arg)[0]=0;exit(0);break;//kill all
 			case 7:
 			{
-				
 				((int *)arg)[1]=0;
 				printf("reserve option!!\n");
 				break;
