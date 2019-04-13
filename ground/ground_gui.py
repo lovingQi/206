@@ -27,7 +27,7 @@ cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的
 CMDDST=('192.168.3.120',10102)
 cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 loc=[]
-freq_list=np.array([88.5,93.7,101.1])
+freq_list=np.array([88.5,93.7])
 current_freq=88.5#dang qian pin lv
 scan=0
  #xiugaide==================================================
@@ -283,22 +283,26 @@ def fmdm():
                             if(thd[sd].isAlive()):
                                 thd[sd].join()
                         freq_list=np.array([])
-                        cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
+                        cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+                        count=0
+                        while count<12000:
+                            data=st.recv(6)
+                            count +=1
+                        cmd.sendto(b'\x04\x00\x04\x00',CMDDST)
                         time.sleep(5)
-                        cmd.sendto(b'\x00\x00\x04\x00',CMDDST)
-                        time.sleep(5)
-                        cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
+                        cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
                         #print('\n可疑频点集(MHz):',freq_list)
                         time.sleep(5)
-                        cmd.sendto(b'\x00\x00\x03\x00',CMDDST)
+                        cmd.sendto(b'\x03\x00\x03\x00',CMDDST)
                     cmd.sendto((int(freq_list[now]*10)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
+                    count=0
                     while count<64000:
                         data=st.recv(6)
                         count +=1
-                    count=0
+                    
                     current_freq=freq_list[now]
-                Frequency_Window.delete(0,"end")
-                Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
+                    Frequency_Window.delete(0,"end")
+                    Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
                 
                 #xiugaide==================================================
                 rec=wave.open('fm0.wav','wb')
@@ -319,33 +323,45 @@ def fmdm():
                 rec.setframerate(16000)
 #按键发送指令
 def Open_Serial3():
+  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+  time.sleep(3)
   cmd.sendto(b'\x03\x00\x03\x00',CMDDST)
 def Open_Serial4():
+  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+  time.sleep(3)
   cmd.sendto(b'\x04\x00\x04\x00',CMDDST)
 def Open_Serial5():
   cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
 def Open_Serial6():
-  cmd.sendto(b'\x07\x00\x07\x00',CMDDST)
+  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
 def Open_Serial7():
     global scan,action
     if(1==scan):
         scan=0
-        action.configure(text="开始扫描",bg='cornflowerblue')
+        action.configure(text="自动扫描",bg='cornflowerblue')
+        tkinter.messagebox.showinfo("提示","以切换为手动扫描模式")
     else:
         scan=1
-        action.configure(text= "停止扫描",bg = "red")
+        action.configure(text= "手动扫描",bg = "red")
+        tkinter.messagebox.showinfo("提示","以切换为自动扫描模式")
+        
 def Open_Serial8():
     cmd.sendto(b'\x06\x00\x06\x00',CMDDST)
 fmid=Thread(target=fmdm)
 fmid.start()
 fftid=Thread(target=fftp)
 fftid.start()
-tk.Button( switch3, text = " 解 调  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial3 ).pack(side = "left", padx = 5 )
+tk.Button( switch3, text = "  监  听  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial3 ).pack(side = "left", padx = 5 )
 tk.Button( switch3, text = "    停止    ",font = ("宋体",14,"bold"),  bd = 4,bg='red',fg="honeydew",command = Open_Serial5 ).pack(side = "right", padx = 3 )
 tk.Button( switch4, text = " 频谱图 ",font = ("宋体",14,"bold"),bd = 4, bg='cornflowerblue',fg="honeydew",command = Open_Serial4 ).pack(side = "left", padx = 5 )
 tk.Button( switch4, text = "        退出        ",font = ("宋体",14,"bold"), bd = 4,bg='red',fg="honeydew",command = Open_Serial6 ).pack(side = "right", padx = 5 )
-action = tk.Button( switch5,text = "开始扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial7)
+action = tk.Button( switch5,text = "自动扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial7)
 action.pack(side = "left",padx = 5)
 tk.Button( switch5,text = "强制退出",font = ("宋体",14,"bold"),bd = 4,bg='red',fg="honeydew",command = Open_Serial8).pack(side = "right", padx = 0.5)
 GUI.mainloop()
 cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+print('bye bye')
+'''problem
+line 283 命令无法响应
+'''
