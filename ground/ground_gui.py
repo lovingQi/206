@@ -27,7 +27,7 @@ cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的
 CMDDST=('192.168.3.120',10102)
 cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 loc=[]
-freq_list=np.array([88.5,93.7])
+freq_list=np.array([88.5])
 current_freq=88.5#dang qian pin lv
 scan=0
  #xiugaide==================================================
@@ -78,6 +78,7 @@ switch4.place(x = 760, y = 460, width = 220)
 switch5 = tk.LabelFrame(GUI,text = "",padx = 10,pady = 10)
 switch5.place(x = 760, y = 510, width = 220)
 #语音识别
+
 def reco(fname,client,c_freq):
     with open(fname, 'rb') as fp:
         result=client.asr(fp.read(), 'wav', 16000, {'dev_pid': 1537,})
@@ -118,8 +119,8 @@ def reco(fname,client,c_freq):
                         if keywords[i] in line_list:
                                 ciku.append(keywords[i])
                         i +=1
-                times = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
-                Information_Window.insert("end",'['+str(times)+'频率:'+str(c_freq)+'MHz'+']'+str(lines) + '\n')# 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
+                times = time.strftime("%m-%d %H:%M:%S",time.localtime())
+                Information_Window.insert("end",'['+str(times)+' 频率:'+str(c_freq)+'MHz'+']'+str(lines) + '\n')# 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Information_Window.see("end")
                 Guanjianci_Window.insert("end",str(segStat) + '\n') # 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Guanjianci_Window.see("end") # 此处为显示操作信息窗口进度条末尾内容，以上两行
@@ -127,9 +128,9 @@ def reco(fname,client,c_freq):
                 if m > 0:
                         i = 0
                         while i<m:
-                                fd=Thread(target=showin,args= (ciku[i],))
+                                fd=Thread(target=showin,args= (c_freq,))
                                 fd.start()
-                                Gj_Window.insert("end",'['+str(times)+'频率:'+str(c_freq)+'MHz'+']'+'搜索到关键词：'+str(ciku[i])+'\n')
+                                Gj_Window.insert("end",'['+str(times)+' 频率:'+str(c_freq)+'MHz'+']'+'\n'+'搜索到关键词：'+str(ciku[i])+'\n')
                                 Gj_Window.see("end")
                                 i +=1
         else:
@@ -144,8 +145,8 @@ def WriteData():
     cmd.sendto((int(a)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
     
 tk.Button(Send, text="设置", command=WriteData).grid(pady=1, sticky=tk.E)
-def showin(s):
-    tkinter.messagebox.showinfo("提示","搜索到关键词:"+str(s))
+def showin(c_freq):
+    tkinter.messagebox.showinfo("提示",str(c_freq)+'为黑广播')
 def fftp():
     #xiugaide==================================================
     global loc
@@ -211,7 +212,16 @@ def fftp():
             x=[]
         else:
             x.append(int.from_bytes(data,'little'))
-            
+#========================================================            
+def change_freq():
+    cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
+    time.sleep(2)
+    cmd.sendto(b'\x00\x00\x04\x00',CMDDST)
+    time.sleep(5)
+    cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
+    time.sleep(3)
+    cmd.sendto(b'\x00\x00\x03\x00',CMDDST)
+#========================================================
 def fmdm():
     global scan
     global freq_list,now
@@ -282,27 +292,19 @@ def fmdm():
                         for sd in thd:
                             if(thd[sd].isAlive()):
                                 thd[sd].join()
-                        freq_list=np.array([])
-                        cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-                        count=0
-                        while count<12000:
+                        freq_list=np.array([88.5])                    
+                        cg=Thread(target=change_freq,)
+                        cg.start()
+                        while(cg.isAlive()):
                             data=st.recv(6)
-                            count +=1
-                        cmd.sendto(b'\x04\x00\x04\x00',CMDDST)
-                        time.sleep(5)
-                        cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-                        #print('\n可疑频点集(MHz):',freq_list)
-                        time.sleep(5)
-                        cmd.sendto(b'\x03\x00\x03\x00',CMDDST)
-                    cmd.sendto((int(freq_list[now]*10)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
-                    count=0
+                    cmd.sendto((int(freq_list[now]*10)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)                            
                     while count<64000:
                         data=st.recv(6)
                         count +=1
-                    
+                    count=0
                     current_freq=freq_list[now]
-                    Frequency_Window.delete(0,"end")
-                    Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
+                Frequency_Window.delete(0,"end")
+                Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
                 
                 #xiugaide==================================================
                 rec=wave.open('fm0.wav','wb')
@@ -323,45 +325,33 @@ def fmdm():
                 rec.setframerate(16000)
 #按键发送指令
 def Open_Serial3():
-  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-  time.sleep(3)
   cmd.sendto(b'\x03\x00\x03\x00',CMDDST)
 def Open_Serial4():
-  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-  time.sleep(3)
   cmd.sendto(b'\x04\x00\x04\x00',CMDDST)
 def Open_Serial5():
   cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
 def Open_Serial6():
-  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+  cmd.sendto(b'\x07\x00\x07\x00',CMDDST)
 def Open_Serial7():
     global scan,action
     if(1==scan):
         scan=0
-        action.configure(text="自动扫描",bg='cornflowerblue')
-        tkinter.messagebox.showinfo("提示","以切换为手动扫描模式")
+        action.configure(text="开始扫描",bg='cornflowerblue')
     else:
         scan=1
-        action.configure(text= "手动扫描",bg = "red")
-        tkinter.messagebox.showinfo("提示","以切换为自动扫描模式")
-        
+        action.configure(text= "停止扫描",bg = "red")
 def Open_Serial8():
     cmd.sendto(b'\x06\x00\x06\x00',CMDDST)
 fmid=Thread(target=fmdm)
 fmid.start()
 fftid=Thread(target=fftp)
 fftid.start()
-tk.Button( switch3, text = "  监  听  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial3 ).pack(side = "left", padx = 5 )
+tk.Button( switch3, text = " 解 调  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial3 ).pack(side = "left", padx = 5 )
 tk.Button( switch3, text = "    停止    ",font = ("宋体",14,"bold"),  bd = 4,bg='red',fg="honeydew",command = Open_Serial5 ).pack(side = "right", padx = 3 )
 tk.Button( switch4, text = " 频谱图 ",font = ("宋体",14,"bold"),bd = 4, bg='cornflowerblue',fg="honeydew",command = Open_Serial4 ).pack(side = "left", padx = 5 )
 tk.Button( switch4, text = "        退出        ",font = ("宋体",14,"bold"), bd = 4,bg='red',fg="honeydew",command = Open_Serial6 ).pack(side = "right", padx = 5 )
-action = tk.Button( switch5,text = "自动扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial7)
+action = tk.Button( switch5,text = "开始扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial7)
 action.pack(side = "left",padx = 5)
 tk.Button( switch5,text = "强制退出",font = ("宋体",14,"bold"),bd = 4,bg='red',fg="honeydew",command = Open_Serial8).pack(side = "right", padx = 0.5)
 GUI.mainloop()
 cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-print('bye bye')
-'''problem
-line 283 命令无法响应
-'''
