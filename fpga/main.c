@@ -1,7 +1,6 @@
 #include "main.h"
-#include "unistd.h"
 //
-int fmsock,fmdst,fftsock,fftdst;
+int sockfd,dst,fftsock,fftdst;
 int sin_size;
 struct sockaddr_in my_addr,fft_addr;
 struct sockaddr_in their_addr,fft_their;
@@ -9,28 +8,33 @@ struct sockaddr_in their_addr,fft_their;
 
 int main()
 {
-	void *retval;
-	pthread_t thread1;
-	int arg[2];
-	int ret_thrd1;
+    void *retval;
+    pthread_t thread1;
+    int arg[2];
+    int ret_thrd1;
+	int sta=0;
 	arg[0]=1;
 	arg[1]=0;
-	fmsock=socket(AF_INET,SOCK_STREAM,0);
+	
+	sockfd=socket(AF_INET,SOCK_STREAM,0);
 	fftsock=socket(AF_INET,SOCK_STREAM,0);
+	
 	my_addr.sin_family=AF_INET;
-	my_addr.sin_port=htons(SERVER_SOUND_PORT);
-	my_addr.sin_addr.s_addr=SERVER_SOUND_ADDR;
+	my_addr.sin_port=htons(NET_PORT);
+	my_addr.sin_addr.s_addr=inet_addr(SERVER_ADDR);
+
+	sta=connect(sockfd, (struct sockaddr *)&my_addr, sizeof(my_addr));
+
+	printf("ssslinl %d\n",sta);
 	
 	fft_addr.sin_family=AF_INET;
-	fft_addr.sin_port=htons(SERVER_SPECTRUM_PORT);
-	fft_addr.sin_addr.s_addr=SERVER_SPECTRUM_ADDR;
-	
-	connect(fmsock, (struct sockaddr *)&my_addr, sizeof(my_addr));
-	connect(fftsock, (struct sockaddr *)&fft_addr, sizeof(fft_addr));
-	printf("CONNECT STATE : SOUND %d\n",fmsock);
-	printf("CONNECT STATE : SPECTRUM %d\n",fftsock);
+	fft_addr.sin_port=htons(FFT_PORT);
+	fft_addr.sin_addr.s_addr=inet_addr(SERVER_ADDR);
+	sta=connect(fftsock, (struct sockaddr *)&fft_addr, sizeof(fft_addr));
+
+	//listen(sockfd,1);
 	ret_thrd1 = pthread_create(&thread1, NULL, (void *)&control_process, (void *)arg);
-		
+    printf("start main loop  %d\n",ret_thrd1);
 
 	while(arg[0])
 	{
@@ -38,42 +42,42 @@ int main()
 			if(arg[1]==1)
 				ffts(&arg[1],fftsock);
 			else if(arg[1]==2)
-				fmdm(&arg[1],fmsock);
+				fmdm(&arg[1],sockfd);
 	}
 	printf("bye bye!");
 	exit(0);
 }
-
 void control_process(void *arg)
 {
-    pthread_t thread_client;
     // create socket project
-    int sockcmd=socket(AF_INET,SOCK_STREAM,0);
+    int sockfd=socket(AF_INET,SOCK_STREAM,0);
     // set socket attr
     struct sockaddr_in addr;
     addr.sin_family =AF_INET;
-    addr.sin_port =htons(SERVER_CMD_PORT);
-    addr.sin_addr.s_addr=SERVER_CMD_ADDR;
-
+    addr.sin_port =htons(CRTL_PORT);
+    addr.sin_addr.s_addr=inet_addr(SERVER_ADDR);
+	struct sockaddr_in cli;
+    socklen_t len=sizeof(cli);
     //bind address
-    int cmd_ret =connect(sockcmd,(struct sockaddr*)&addr,sizeof(addr));
-	int *buf;
-	buf=(int *)malloc(8);
-    if(0>cmd_ret)
+    int ret = connect(sockfd,(struct sockaddr*)&addr,sizeof(addr));
+    if(0>ret)
     {
-        printf("CONNECT CMD SERVER FAILED \n");
+        printf("bind addr failed \n");
         return ;
     }
-    printf("CONNECT CMD SERVER SUCCESS\n");
+	int *buf;
+	buf=(int *)malloc(8);
+    printf("start cmd loop\n");
 	while(((int *)arg)[0])//main loop
     {
-        recv(sockcmd,buf,4,0);
+        recv(sockfd,buf,4,0);
 		short cmd,data;
 		cmd=*buf>>16;
 		data=*buf&0xffff;
 		printf("cmd recv :%d %d %d\n",cmd,data,((int *)arg)[0]);
 		switch (cmd)
 		{
+
 			case 1:
 			{
 				set_dev_paths("ad9361-phy");
@@ -84,8 +88,9 @@ void control_process(void *arg)
 			case 4:((int *)arg)[1]=1;break;//start fft
 			case 5:((int *)arg)[1]=0;send(fftdst,"\xaa\xbb\xcc\xdd",4,0);break;//kill sub
 			case 6:((int *)arg)[0]=0;exit(0);break;//kill all
+
 		}
     }
-    close(sockcmd);
+    close(sockfd);
 }
 

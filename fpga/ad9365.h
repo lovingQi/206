@@ -1,7 +1,7 @@
 #ifndef ad9365
 #define ad9365
 #define FMDM 1
-#define FFT_PORT 10103
+//#define FFT_PORT 10103
 #define DECIMATION_FACTOR 48
 #define AUDIO_SAMPLE_RATE 48000
 #include <math.h>

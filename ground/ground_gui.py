@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 APP_ID = '10836826'
 API_KEY = 'YvPbyRbqvwt0VDq8RK0GXRxF'
 SECRET_KEY = 'GPIvnPuYf33OwSvYYf4bta2YN0HL0SBH'
-FFT_SERVER=('192.168.3.120',10102)
-FM_SERVER=('192.168.3.120',10104)
+FFT_SERVER=('119.29.209.127',10102)
+FM_SERVER=('119.29.209.127',10104)
 #========================================================
 cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 CMD_STOP=b'\x05\x00\x05\x00'
@@ -29,7 +29,7 @@ CMD_FM=b'\x03\x00\x03\x00'
 CMD_FFT=b'\x04\x00\x04\x00'
 CMD_KILL=b'\x06\x00\x06\x00'
 CMD_NOP=b'\x07\x00\x07\x00'
-CMDDST=('192.168.3.120',10105)
+CMDDST=('119.29.209.127',10105)
  #xiugaide==================================================
 loc=[]
 freq_list=np.array([88.5])

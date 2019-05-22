@@ -27,7 +27,7 @@ static int demodulate(struct iio_buffer_block *block,int dst)
 	short *sample_buffer;
 	size_t num_bytes, offset;
 	int ret;
-
+	int bug;
 	new_min = 0xfffffff;
 	new_max = -0xfffffff;
 
@@ -82,17 +82,14 @@ static int demodulate(struct iio_buffer_block *block,int dst)
 			sample = 0;
 		}
 	}
-	//min=n-2;
-	int k;
-	//printf("%d\n",);
-	for (k=0;k<((signed int)n-1);)
+	min=n;
+	//printf("%d\n",min);
+	for (n=0;n<min;)
 	{
-		send(dst,&sample_buffer[k],6,0);
-		k+=3;
+		send(dst,&sample_buffer[n],6,0);
+		//printf("%d\n",bug);
+		n+=3;
 	}
-	//set_dev_paths("ad9361-phy");
-        //read_devattr_int("in_voltage_sampling_frequency", &n);
-	//printf("rssi:%d\n",n);
 	min = new_min;
 	max = new_max;
 	
@@ -171,7 +168,7 @@ int fmdm(int* life,int dst)
 
 	//if (argc > 1) {
 		float freq;
-		freq = 88.5;
+		freq = 99.7;
 		if (freq < 1000)
 			freq *= 1000000;
 		write_devattr_int("out_altvoltage0_RX_LO_frequency", freq);
@@ -213,7 +210,7 @@ int fmdm(int* life,int dst)
 
 	set_dev_paths("cf-ad9361-lpc");
 	write_devattr_int("buffer/enable", 1);
-	send(dst,"xxxxxx",6,0);
+
 	while (*life) {
 //		printf("life %d \n",*life);
 		ret = ioctl(fd, IIO_BLOCK_DEQUEUE_IOCTL, &block);

@@ -8,8 +8,8 @@ sound_out_addr         = ('', 10104)
 cmd_in_addr               = ('', 10105)
 cmd_out_addr            = ('', 10106)
 
-spectrum_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#10101
-spectrum_in = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#10102
+spectrum_in = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#10101
+spectrum_out = socket.socket(socket.AF_INET, socket.SOCK_STREAM)#10102
 spectrum_in.bind(spectrum_in_addr)
 spectrum_in.listen(1)
 spectrum_out.bind(spectrum_out_addr)
@@ -56,7 +56,6 @@ def spectrum_tran():
     global spectrum_out_cli
     while 1:
         data=spectrum_in_cli[0].recv(4)
-        print(data)
         try:
             spectrum_out_cli[0].send(data)
         except:
@@ -70,6 +69,7 @@ get_cli_id=Thread(target=get_cli)
 get_cli_id.start()
 while 1:
     cmd,addr=cmd_in.recvfrom(4)
+    print(cmd)
     cmd_out_cli[0].send(cmd)
 
 
