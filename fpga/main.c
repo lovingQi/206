@@ -86,7 +86,7 @@ void control_process(void *arg)
 			}
 			case 3:((int *)arg)[1]=2;break;//start fmod 
 			case 4:((int *)arg)[1]=1;break;//start fft
-			case 5:((int *)arg)[1]=0;send(fftdst,"\xaa\xbb\xcc\xdd",4,0);break;//kill sub
+			case 5:((int *)arg)[1]=0;send(fftsock,"\xaa\xbb\xcc\xdd",4,0);break;//kill sub
 			case 6:((int *)arg)[0]=0;exit(0);break;//kill all
 
 		}
