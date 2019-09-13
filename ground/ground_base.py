@@ -16,24 +16,19 @@ import numpy as np
 from aip import AipSpeech
 from threading import Thread
 import matplotlib.pyplot as plt
-#=============================
-APP_ID = '10836826'
-API_KEY = 'YvPbyRbqvwt0VDq8RK0GXRxF'
-SECRET_KEY = 'GPIvnPuYf33OwSvYYf4bta2YN0HL0SBH'
-FFT_SERVER=('192.168.3.120',10103)
-FM_SERVER=('192.168.3.120',10101)
-#========================================================
-cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
-CMD_STOP=b'\x05\x00\x05\x00'
-CMD_FM=b'\x03\x00\x03\x00'
-CMD_FFT=b'\x04\x00\x04\x00'
-CMD_KILL=b'\x06\x00\x06\x00'
-CMD_NOP=b'\x07\x00\x07\x00'
+#初始化
+APP_ID = '15628658'
+API_KEY = 'GAy9qAeG8BB5avZPWzeKzt5Y'
+SECRET_KEY = '7B4gXiXLpfnHH4AXBUjiO04nphyEgGBp'
+DST=('192.168.3.120',10101)
 CMDDST=('192.168.3.120',10102)
+cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
  #xiugaide==================================================
+CMDDST=('192.168.3.120',10102)
+cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 loc=[]
 freq_list=np.array([88.5])
-current_freq=88.5
+current_freq=88.5#dang qian pin lv
 scan=0
  #xiugaide==================================================
 #窗口程序
@@ -48,14 +43,18 @@ Guanjianci = tk.LabelFrame(GUI, text="关键词统计", padx=10, pady=10)
 Guanjianci.place(x=20, y=240)
 Guanjianci_Window = scrolledtext.ScrolledText(Guanjianci, width=18, height=17, padx=10, pady=10,font=("宋体",12),wrap=tk.WORD)
 Guanjianci_Window.grid()
-Gj = tk.LabelFrame(GUI,text = "”黑广播“记录",padx = 10,pady =10)
-Gj.place(x=245,y =240)
-Gj_Window = scrolledtext.ScrolledText(Gj, width=30, height=17, padx=10, pady=10,font=("宋体",12),fg = "red",wrap=tk.WORD)
+Gj = tk.LabelFrame(GUI,text = "”黑广播“内容匹配结果",padx = 10,pady =10)
+Gj.place(x=245,y =385)
+Gj_Window = scrolledtext.ScrolledText(Gj, width=30, height=8, padx=10, pady=10,font=("宋体",12),wrap=tk.WORD)
 Gj_Window.grid()
-keyi = tk.LabelFrame(GUI, text="可疑频点列表", padx=10, pady=10)
-keyi.place(x=558,y=310)
-keyi_Window = scrolledtext.ScrolledText(keyi, width=15, height=12, padx=10, pady=10,font=("宋体",12),fg = "blue",wrap=tk.WORD)
-keyi_Window.grid()
+HGB_fre = tk.LabelFrame(GUI,text = "“黑广播”频点记录",padx = 10, pady = 10)
+HGB_fre.place(x = 245,y = 240)
+HGB_fre_Window = scrolledtext.ScrolledText(HGB_fre, width=30, height=5, padx=10, pady=10,font=("宋体",12),fg = "red",wrap=tk.WORD)
+HGB_fre_Window.grid()
+now_list = tk.LabelFrame(GUI, text="接收的广播频点列表", padx=10, pady=10)
+now_list.place(x=558,y=316)
+now_list_Window = scrolledtext.ScrolledText(now_list, width=15, height=12, padx=10, pady=10,font=("宋体",12),fg = "blue",wrap=tk.WORD)
+now_list_Window.grid()
 Send = tk.LabelFrame(GUI, text="设置中心频率（MHz）", padx=10, pady=5)  
 Send.place(x=760, y=310)
 DataSend = tk.StringVar()  # 定义DataSend为保存文本框内容的字符串
@@ -83,14 +82,12 @@ switch4.place(x = 760, y = 460, width = 220)
 switch5 = tk.LabelFrame(GUI,text = "",padx = 10,pady = 10)
 switch5.place(x = 760, y = 510, width = 220)
 #语音识别
-
+def hgb_record(r):
+    HGB_fre_Window.insert("end",str(r)+'\n')
+    HGB_fre_Window.see("end")
 def reco(fname,client,c_freq):
     with open(fname, 'rb') as fp:
-        try:
-            result=client.asr(fp.read(), 'wav', 16000, {'dev_pid': 1537,})
-        except:
-            print('CLOUD SERVER ERROR')
-            result['err_no']=1
+        result=client.asr(fp.read(), 'wav', 16000, {'dev_pid': 1537,})
         if result['err_no']==0:
                 with open ("黑广播.txt",'w',encoding = 'utf-8') as hgb_wb:
                     hgb_wb.write(result['result'][0])
@@ -114,42 +111,63 @@ def reco(fname,client,c_freq):
                 c = c.sort_values(by = ["计数"],ascending = False)#对计数次数排序
                 segStat = c.reset_index()#还原segStat矩阵索引
                 #关键词提取
-                with open('关键词.txt','r',encoding='utf-8-sig') as f:
-                    liness = f.read()#读取文本中全部行
-                    line_list=liness.split('\n')
+                f = open('关键词.txt','r',encoding='utf-8-sig')
+                liness = f.readlines()#读取文本中全部行
+                line_list = []
+                for line in liness:
+                        line_list.append(line.strip())#line_list为关键词库中关键词的数组集合
+                f.close()
                 keywords = segStat.iloc[:,0]
+                l = len(keywords)
                 ciku =[]
-                for i in keywords:
-                        if i in line_list:
-                                ciku.append(i)
+                i = 0
+                while i<l:
+                        if keywords[i] in line_list:
+                                ciku.append(keywords[i])
+                        i +=1
                 times = time.strftime("%m-%d %H:%M:%S",time.localtime())
                 Information_Window.insert("end",'['+str(times)+' 频率:'+str(c_freq)+'MHz'+']'+str(lines) + '\n')# 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Information_Window.see("end")
                 Guanjianci_Window.insert("end",str(segStat) + '\n') # 在操作信息窗口显示发送的指令并换行，end为在窗口末尾处显示
                 Guanjianci_Window.see("end") # 此处为显示操作信息窗口进度条末尾内容，以上两行
-                for i in ciku:
-                    fd=Thread(target=showin,args= (c_freq,))
-                    fd.start()
-                    Gj_Window.insert("end",'['+str(times)+' 频率:'+str(c_freq)+'MHz'+']'+'\n'+'搜索到关键词：'+str(i)+'\n')
-                    Gj_Window.see("end")
+                m = len(ciku)
+                if m > 0:
+                        i = 0
+                        while i<m:
+                                fd=Thread(target=showin,args= (c_freq,))
+                                fd.start()
+                                Gj_Window.insert("end",'['+str(times)+' 频率:'+str(c_freq)+'MHz'+']'+'\n'+'搜索到关键词：'+str(ciku[i])+'\n')
+                                Gj_Window.see("end")
+                                hgb_record1 = Thread(target = hgb_record, args = (c_freq,))
+                                hgb_record1.start()
+                                i +=1
         else:
                 print(result['err_msg'])
 			
-def set_freq():
-    global DataSend
+def WriteData():
     global current_freq
+    global DataSend
     DataSend = EntrySend.get() # 读取当前文本框的内容保存到字符串变量DataSend
     a=DataSend.replace('.','')
     current_freq=(int(a)/10)
     cmd.sendto((int(a)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
-    
-
+    Frequency_Window.delete(0,"end")
+    Frequency_Window.insert("end",'开始扫描频点 :'+str(DataSend)+'MHz')
+tk.Button(Send, text="设置", command=WriteData).grid(pady=1, sticky=tk.E)
+def SendData(hgb_freq):
+    global current_freq
+    hgb_freq = str(hgb_freq)
+    a=hgb_freq.replace('.','')
+    current_freq=(int(a)/10)
+    cmd.sendto((int(a)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)
+    Frequency_Window.delete(0,"end")
+    Frequency_Window.insert("end",'开始扫描频点 :'+str(hgb_freq)+'MHz')
 def showin(s):
     root = tk.Tk()
     root.title("提示")
     root.geometry("200x80+600+500")
     l = tk.Label(root,text = '找到“黑广播”',font = ("宋体",12))
-    r = tk.Label(root,text = '频率：'+str(s),font = ("宋体",14),fg='red')
+    r = tk.Label(root,text = '频率：'+str(s)+'MHz',font = ("宋体",14),fg='red')
     tm = tk.Label(root,fg='blue', anchor = 'w')
     tm.place(x=1, y= 60, width =150 )
     l.place(x = 50,y =10)
@@ -166,35 +184,23 @@ def fftp():
     #xiugaide==================================================
     global loc
     global freq_list
+    FM_list = [ '88.5','89.7', '93.7', '97.5', '99.7',  '96.6', '102.4', '104.3', '105.8', '101.7', '95.8', '107.5', '98.9', '91.4', '106.9', '102','95.2','103.5','100.5','124.0']
      #xiugaide==================================================
     ft = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #建立一个基于TCP的Socket
-    try_count=0
-    while 1:
-        try:
-            ft.connect(FFT_SERVER)
-            break
-        except:
-            print('FFT CONNECT ERROR ....RETRY!',try_count)
-            try_count+=1
-            if(try_count>5):
-                print('FFT CONNECT ERROR')
-                exit()
+    ft.connect(('192.168.3.120',10103))
     print('fft connect successful')
     x=[]
     xz = np.linspace(88, 118, 8192) #X axis data
     time=0
     temp_list=[]
     final_list=np.array([])
-    
-    FIGURE_HEAD=b'\x00\xba\xdc\xfe'
-    FIGURE_CLOSE=b'\xaa\xbb\xcc\xdd'
     while 1:
         data=ft.recv(4)
-        if data==FIGURE_HEAD:
+        if data==b'\x00\xba\xdc\xfe':
             if(len(x)==8192):
                 x=np.array(x)
                  #xiugaide==================================================
-                loc=np.where(x>4e7)[0]
+                loc=np.where(x>2e7)[0]
                 loc=loc/8192*40+88
                 loc=np.around(loc,1)
                 loc=np.unique(loc)
@@ -216,10 +222,21 @@ def fftp():
                     freq_list=np.unique(freq_list)
                     l = len(freq_list)
                     i = 0
-                    keyi_Window.delete(0.1,"end")
+                    now_list_Window.delete(0.1,"end")
                     while i<l:
-                        keyi_Window.insert("end",str(freq_list[i])+'\n')
+                        now_list_Window.insert("end",str(freq_list[i])+'\n')
+                        now_list_Window.see("end")
+                        '''
+                        if str(freq_list[i]) not in FM_list:
+                            hgb_send = Thread(target = SendData, args = (freq_list[i],))
+                            hgb_send.start()
+                            hgb_find = Thread(target=showin,args= (freq_list[i],))
+                            hgb_find.start()
+                            hgb_record2 = Thread(target = hgb_record, args = (freq_list[i],))
+                            hgb_record2.start()
+                        '''
                         i +=1
+                        
                 x=10*np.log10(x)
                  #xiugaide==================================================
                 plt.figure(2)
@@ -230,60 +247,44 @@ def fftp():
                 plt.plot(xz,np.array(x))    
                 plt.pause(0.01)
             x=[]
-            
-        elif data==FIGURE_CLOSE:#图片显示关闭
+        elif data==b'\xaa\xbb\xcc\xdd':#图片显示关闭
             plt.close(2)
+            bufcount=1000#处理掉没处理的数据
+            while bufcount:
+                data=ft.recv(4)
+                bufcount-=1
             x=[]
         else:
             x.append(int.from_bytes(data,'little'))
 #========================================================            
 def change_freq():
-    cmd.sendto(CMD_STOP,CMDDST)
+    cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
     time.sleep(2)
-    cmd.sendto(CMD_FFT,CMDDST)
+    cmd.sendto(b'\x00\x00\x04\x00',CMDDST)
     time.sleep(5)
-    cmd.sendto(CMD_STOP,CMDDST)
+    cmd.sendto(b'\x00\x00\x05\x00',CMDDST)
     time.sleep(3)
-    cmd.sendto(CMD_FM,CMDDST)
-    
+    cmd.sendto(b'\x00\x00\x03\x00',CMDDST)
 #========================================================
 def fmdm():
     global scan
     global freq_list,now
     global current_freq
     #声卡输出流初始化
-    try:
-        p = pyaudio.PyAudio()
-        stream = p.open(format = p.get_format_from_width(2),channels = 1,rate = 48000, output = True)
-    except:
-        print('OPEN SOUND DEVICE ERROR')
-        exit()
+    p = pyaudio.PyAudio()
+    stream = p.open(format = p.get_format_from_width(2),channels = 1,rate = 48000, output = True)
     #网络socket初始化
     st = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #建立一个基于TCP的Socket
-    try_count=0
-    while 1:
-        try:
-            st.connect(FM_SERVER)
-            break
-        except:
-            print('FM CONNECT ERROR ....RETRY!',try_count)
-            try_count+=1
-            if(try_count>5):
-                print('FM CONNECT ERROR')
-                exit()
-        
-    print('fm connect success')
+    st.connect(('192.168.3.120',10101))
+    print('fmdm connect successful')
     count=0
     state=0
     now = 0
     #缓存文件初始化
-    try:
-        rec=wave.open('fm0.wav','wb')
-        rec.setnchannels(1)
-        rec.setsampwidth(2)
-        rec.setframerate(16000)
-    except:
-        print('WAVFILE OPEN ERROR!')
+    rec=wave.open('fm0.wav','wb')
+    rec.setnchannels(1)
+    rec.setsampwidth(2)
+    rec.setframerate(16000)
     #线程字典及初始化
     thd={} 
     tt=0
@@ -294,13 +295,10 @@ def fmdm():
         if(data==b'xxxxxx'):
             count=0
             rec.close()
-            try:
-                rec=wave.open('fm0.wav','wb')
-                rec.setnchannels(1)
-                rec.setsampwidth(2)
-                rec.setframerate(16000)
-            except:
-                print('WAVFILE OPEN ERROR!')
+            rec=wave.open('fm'+str(state)+'.wav','wb')
+            rec.setnchannels(1)
+            rec.setsampwidth(2)
+            rec.setframerate(16000)
             continue
         dataa=np.array(bytearray(data))
         dataa.dtype='int16'
@@ -313,21 +311,17 @@ def fmdm():
         datae.dtype='int16'
         datab=datae[::4]
         count=count+len(datab)
-        
-        try:
-            #声卡播放
-            stream.write(data)
-            #写缓存文件
-            rec.writeframes(bytes(datab))
-        except:
-            print('STREAM WRITE ERROR')
+        #声卡播放
+        stream.write(data)
+        #写缓存文件
+        rec.writeframes(bytes(datab))
         
         if(count>160000):
             count=0
             rec.close()
             nc = int(numberChosen.get())
             dem_time=int(nc/10-1)
-            if (~(state<dem_time)):
+            if (state>=dem_time):
                 if(thd[state].isAlive()):
                     thd[state].join()
                 thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),current_freq,))
@@ -348,48 +342,41 @@ def fmdm():
                         while(cg.isAlive()):
                             data=st.recv(6)
                     cmd.sendto((int(freq_list[now]*10)-880).to_bytes(2,'little')+b'\x01\x00',CMDDST)                            
-                    count=16000
-                    while count>0:
+                    while count<16000:
                         data=st.recv(6)
-                        count -=1
+                        count +=1
+                    count=0
                     current_freq=freq_list[now]
                 Frequency_Window.delete(0,"end")
                 Frequency_Window.insert("end",'开始扫描频点 :'+str(current_freq)+'MHz')
+                
                 #xiugaide==================================================
-                try:
-                    rec=wave.open('fm0.wav','wb')
-                    rec.setnchannels(1)
-                    rec.setsampwidth(2)
-                    rec.setframerate(16000)
-                    state=0
-                except:
-                    print('FAIL TO OPEN WAVFILE!')
+                rec=wave.open('fm0.wav','wb')
+                rec.setnchannels(1)
+                rec.setsampwidth(2)
+                rec.setframerate(16000)
+                state=0
             else:
-                if(thd[state].isAlive()):
-                    thd[state].join()
                 thd[state]=Thread(target=reco,args=('fm'+str(state)+'.wav',AipSpeech(APP_ID, API_KEY, SECRET_KEY),current_freq,))
                 thd[state].start()
+                
+                if(thd[state+1].isAlive()):
+                    thd[state+1].join()
                 state += 1
-                try:
-                    rec=wave.open('fm0.wav','wb')
-                    rec.setnchannels(1)
-                    rec.setsampwidth(2)
-                    rec.setframerate(16000)
-                except:
-                    print('FAIL TO OPEN WAVFILE!')
-                    
+                rec=wave.open('fm'+str(state)+'.wav','wb')
+                rec.setnchannels(1)
+                rec.setsampwidth(2)
+                rec.setframerate(16000)
 #按键发送指令
-def start_fm():
-    cmd.sendto(CMD_FM,CMDDST)
-def start_fft():
-    cmd.sendto(CMD_FFT,CMDDST)
-def stop_datatran():
-    cmd.sendto(CMD_STOP,CMDDST)
-def reserve():
-    cmd.sendto(CMD_NOP,CMDDST)
-def kill_server():
-    cmd.sendto(CMD_KILL,CMDDST)
-def scan_switch():
+def Open_Serial3():
+  cmd.sendto(b'\x03\x00\x03\x00',CMDDST)
+def Open_Serial4():
+  cmd.sendto(b'\x04\x00\x04\x00',CMDDST)
+def Open_Serial5():
+  cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
+def Open_Serial6():
+  cmd.sendto(b'\x07\x00\x07\x00',CMDDST)
+def Open_Serial7():
     global scan,action
     if(1==scan):
         scan=0
@@ -397,26 +384,19 @@ def scan_switch():
     else:
         scan=1
         action.configure(text= "停止扫描",bg = "red")
-        
-tk.Button(Send, text="设置", command=set_freq).grid(pady=1, sticky=tk.E)
-tk.Button( switch3, text = " 解 调  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = start_fm ).pack(side = "left", padx = 5 )
-tk.Button( switch3, text = "    停止    ",font = ("宋体",14,"bold"),  bd = 4,bg='red',fg="honeydew",command = stop_datatran ).pack(side = "right", padx = 3 )
-tk.Button( switch4, text = " 频谱图 ",font = ("宋体",14,"bold"),bd = 4, bg='cornflowerblue',fg="honeydew",command = start_fft ).pack(side = "left", padx = 5 )
-tk.Button( switch4, text = "        退出        ",font = ("宋体",14,"bold"), bd = 4,bg='red',fg="honeydew",command = reserve ).pack(side = "right", padx = 5 )
-action = tk.Button( switch5,text = "开始扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = scan_switch)
+def Open_Serial8():
+    cmd.sendto(b'\x06\x00\x06\x00',CMDDST)
+tk.Button( switch3, text = " 解 调  ",font = ("宋体",14,"bold"), bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial3 ).pack(side = "left", padx = 5 )
+tk.Button( switch3, text = "    停止    ",font = ("宋体",14,"bold"),  bd = 4,bg='red',fg="honeydew",command = Open_Serial5 ).pack(side = "right", padx = 3 )
+tk.Button( switch4, text = " 频谱图 ",font = ("宋体",14,"bold"),bd = 4, bg='cornflowerblue',fg="honeydew",command = Open_Serial4 ).pack(side = "left", padx = 5 )
+tk.Button( switch4, text = "        退出        ",font = ("宋体",14,"bold"), bd = 4,bg='red',fg="honeydew",command = Open_Serial6 ).pack(side = "right", padx = 5 )
+action = tk.Button( switch5,text = "开始扫描", font = ("宋体",14,"bold"),bd = 4,bg='cornflowerblue',fg="honeydew",command = Open_Serial7)
 action.pack(side = "left",padx = 5)
-tk.Button( switch5,text = "强制退出",font = ("宋体",14,"bold"),bd = 4,bg='red',fg="honeydew",command = kill_server).pack(side = "right", padx = 0.5)
-
-try:
-    fmid=Thread(target=fmdm)
-    fmid.start()
-    fftid=Thread(target=fftp)
-    fftid.start()
-except:
-    print('COULD NOT CREATE MAIN THREAD!')
-    exit(0)
+tk.Button( switch5,text = "强制退出",font = ("宋体",14,"bold"),bd = 4,bg='red',fg="honeydew",command = Open_Serial8).pack(side = "right", padx = 0.5)
+fmid=Thread(target=fftp)
+fmid.start()
+fftid=Thread(target=fmdm)
+fftid.start()
 
 GUI.mainloop()
-
 cmd.sendto(b'\x05\x00\x05\x00',CMDDST)
-exit(0)

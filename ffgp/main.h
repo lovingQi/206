@@ -18,13 +18,4 @@ static int fft_cli[MAX_CLI]={0};
 static int fm_cli[MAX_CLI]={0};
 static int fft_cli_num=0;
 static int fm_cli_num=0;
-static int fmsock,fmdst,fftsock,fftdst;
-static int sin_size;
-struct sockaddr_in my_addr,fft_addr;
-struct sockaddr_in their_addr,fft_their;
-#ifdef MY_DEBUG
-pthread_t thread_debug;
-int thread_dbg;
-void my_debug();
-#endif
 //static int ;

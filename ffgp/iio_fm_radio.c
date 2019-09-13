@@ -11,7 +11,7 @@
 
 
 
-static int demodulate(struct iio_buffer_block *block,int* dst,int cnum)
+static int demodulate(struct iio_buffer_block *block,int* dst,int cnum,int* life)
 {
 	int new_min, new_max;
 	long i[3], q[3], di, dq;
@@ -83,6 +83,8 @@ static int demodulate(struct iio_buffer_block *block,int* dst,int cnum)
 	//printf("%d\n",);
 	for (k=0;k<((signed int)n-1);)
 	{
+		if(*life==0)
+			return;
 		gsend(dst,&sample_buffer[k],6,cnum);
 		k+=3;
 	}
@@ -217,7 +219,8 @@ int fmdm(int* life,int* dst,int cnum)
 			perror("Failed to dequeue block");
 			break;
 		}
-		ret = demodulate(&block,dst,cnum);
+		ret = demodulate(&block,dst,cnum,life);
+		//printf("life :%d\n",*life);
 		if (ret)
 			break;
 		ret = ioctl(fd, IIO_BLOCK_ENQUEUE_IOCTL, &block);
@@ -229,6 +232,7 @@ int fmdm(int* life,int* dst,int cnum)
 	
 	set_dev_paths("cf-ad9361-lpc");
 	write_devattr_int("buffer/enable", 0);
+
 	fprintf(stderr, "Stopping FM modulation\n");
 
 	for (i = 0; i < req.count; i++)
@@ -236,6 +240,6 @@ int fmdm(int* life,int* dst,int cnum)
 
 	ioctl(fd, IIO_BLOCK_FREE_IOCTL, 0);
 	close(fd);
-
+	gsend(dst,"\xaa\xbb\xcc\xdd\xee\xff",6,cnum);
 	return 0;
 }

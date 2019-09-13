@@ -46,7 +46,7 @@ struct block {
 };
 
 
-static int demodulate(struct iio_buffer_block *block,int* dst,int cnum);
+static int demodulate(struct iio_buffer_block *block,int* dst,int cnum,int* life);
 static void terminate(int signal);
 static void setup_sigterm_handler(void);
 int fmdm(int* life,int* dst,int cnum);
