@@ -13,7 +13,7 @@
 void control_process(void *arg);
 void gsend(int* dst,void* val,int len,int num);
 void get_client();
-
+//客户集
 static int fft_cli[MAX_CLI]={0};
 static int fm_cli[MAX_CLI]={0};
 static int fft_cli_num=0;

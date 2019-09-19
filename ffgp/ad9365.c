@@ -146,29 +146,33 @@ bool cfg_ad9361_streaming_ch(struct iio_context *ctx, struct stream_cfg *cfg, en
 
 /* simple configuration and streaming */
 
+/*
+
+函数 ffts
+int *life 进程管理 1 进入循环 0 退出循环结束子程序
+int *dst  tcp socket
+int cnum  已连接客户端数目
+
+*/
 
 int ffts (int *life,int* dst,int cnum)
 {
-	static int temp_int;
-	double temp_double;
-	unsigned long timer;
+	
 	ssize_t nbytes_rx;
 	char *p_dat, *p_end;
 	ptrdiff_t p_inc;
 	unsigned int i=0;
-	fftw_complex *in, *out;  
-	fftw_plan p; 
+	fftw_complex *in, *out;  	//fft 数据缓存区
+	fftw_plan p; 			//fft计划
 	// Streaming devices
-	struct iio_device *rx;
+	struct iio_device *rx;		//iio设备
 	// RX and TX sample counters
-	size_t nrx = 0;
-	//int delay=0;
 	// Stream configurations
 	struct stream_cfg rxcfg;
 	//
 	in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);  
-    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-	p=fftw_plan_dft_1d(N,in,out, FFTW_FORWARD, FFTW_ESTIMATE);
+	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+	p = fftw_plan_dft_1d(N,in,out, FFTW_FORWARD, FFTW_ESTIMATE);
 	// Listen to ctrl+c and ASSERT
 	signal(SIGINT, handle_sig);
 
@@ -204,36 +208,43 @@ int ffts (int *life,int* dst,int cnum)
 	}
 
 	printf("* Starting IO streaming (press CTRL+C to cancel)\n");
-	while (*life)
+	while (*life)//主循环
 	{
-		nbytes_rx = iio_buffer_refill(rxbuf);
+		nbytes_rx = iio_buffer_refill(rxbuf);//从ad9361读取数据填入接收缓冲区
 		if (nbytes_rx < 0) { printf("Error refilling buf %d\n",(int) nbytes_rx); iio_shutdown(); }
 		// READ: Get pointers to RX buf and read IQ from RX buf port 0
 		p_inc = iio_buffer_step(rxbuf);
 		p_end = iio_buffer_end(rxbuf);
 		i=0;
+		
+		//将数据存入fft输入缓存
 		for (p_dat = (char *)iio_buffer_first(rxbuf, rx0_i); p_dat < p_end; p_dat += p_inc) {
-			// Example: swap I and Q
+			//  I and Q
 			in[i][0] = (double)((int16_t*)p_dat)[0];
 			in[i][1] = (double)((int16_t*)p_dat)[1];
 			i++;
 		}
-		fftw_execute(p);
-		int head,max=0,maxn=0;
-		double fmm;
-		head=0xfedcba00;
+		fftw_execute(p);//执行fft
+		
+		int head;
+		static int temp_int;
+		double temp_double;
+		head=0xfedcba00;//同步帧，表示上一帧数据已发送完毕，开始发送下一帧数据。
 		gsend(dst,&head,4,cnum);
 		for(i = 0;i < N;i++)  
 		{  
-			temp_double=sqrt(out[i][0]*out[i][0]+out[i][1]*out[i][1]);
+			temp_double=sqrt(out[i][0]*out[i][0]+out[i][1]*out[i][1]);//取绝对值
 			temp_int=(int)(temp_double*100);
-			gsend(dst,&temp_int,4,cnum);
+			gsend(dst,&temp_int,4,cnum);//群发程序目前只支持单客户端不断重连。
 
 		}
 	}
+	//释放缓冲区
 	fftw_free(in);
-    fftw_free(out);
-    fftw_destroy_plan(p);
+	fftw_free(out);
+	//销毁fft计划
+	fftw_destroy_plan(p);
+	//关闭iio设备
 	iio_shutdown();
 	return 0;
 } 

@@ -8,7 +8,18 @@
 #include "iio_fm_radio.h"
 
 
+/*
+解调程序 demodulate()
 
+block 数据接受缓存
+
+dst 目标客户集
+
+cnum 客户数量
+
+life 程序控制 0 结束 1 运行
+
+*/
 
 
 static int demodulate(struct iio_buffer_block *block,int* dst,int cnum,int* life)
@@ -78,9 +89,9 @@ static int demodulate(struct iio_buffer_block *block,int* dst,int cnum,int* life
 			sample = 0;
 		}
 	}
-	//min=n-2;
+	
 	int k;
-	//printf("%d\n",);
+	//发送数据
 	for (k=0;k<((signed int)n-1);)
 	{
 		if(*life==0)
@@ -88,9 +99,7 @@ static int demodulate(struct iio_buffer_block *block,int* dst,int cnum,int* life
 		gsend(dst,&sample_buffer[k],6,cnum);
 		k+=3;
 	}
-	//set_dev_paths("ad9361-phy");
-        //read_devattr_int("in_voltage_sampling_frequency", &n);
-	//printf("rssi:%d\n",n);
+	
 	min = new_min;
 	max = new_max;
 	
@@ -120,8 +129,16 @@ static void setup_sigterm_handler(void)
 
 
 
-/**
- * Usage: `iio_fm_radio [frequency]`
+/**函数 fmdm
+
+作用 解调初始化 
+ 
+dst 目标客户集
+
+cnum 客户数量
+
+life 程序控制 0 结束 1 运行
+ 
  */
 int fmdm(int* life,int* dst,int cnum)
 {
@@ -167,13 +184,11 @@ int fmdm(int* life,int* dst,int cnum)
 	/* Set bandwidth to 300 kHz */
 	write_devattr_int("in_voltage_rf_bandwidth", 300000);
 
-	//if (argc > 1) {
-		float freq;
-		freq = 88.5;
-		if (freq < 1000)
-			freq *= 1000000;
-		write_devattr_int("out_altvoltage0_RX_LO_frequency", freq);
-	//}
+	float freq;
+	freq = 88.5;
+	if (freq < 1000)
+		freq *= 1000000;
+	write_devattr_int("out_altvoltage0_RX_LO_frequency", freq);
 
 	/* Allocate and mmap buffer blocks */
 	ret = ioctl(fd, IIO_BLOCK_ALLOC_IOCTL, &req);
@@ -206,21 +221,17 @@ int fmdm(int* life,int* dst,int cnum)
 			i, blocks[i].block.data.offset, blocks[i].block.size,
 			blocks[i].addr);
 	}
-
 	fprintf(stderr, "Starting FM modulation\n");
-
 	set_dev_paths("cf-ad9361-lpc");
 	write_devattr_int("buffer/enable", 1);
-	send(dst,"xxxxxx",6,0);
+	send(dst,"xxxxxx",6,0);//开始解调
 	while (*life) {
-//		printf("life %d \n",*life);
 		ret = ioctl(fd, IIO_BLOCK_DEQUEUE_IOCTL, &block);
 		if (ret) {
 			perror("Failed to dequeue block");
 			break;
 		}
 		ret = demodulate(&block,dst,cnum,life);
-		//printf("life :%d\n",*life);
 		if (ret)
 			break;
 		ret = ioctl(fd, IIO_BLOCK_ENQUEUE_IOCTL, &block);
@@ -229,17 +240,14 @@ int fmdm(int* life,int* dst,int cnum)
 			break;
 		}
 	}
-	
 	set_dev_paths("cf-ad9361-lpc");
 	write_devattr_int("buffer/enable", 0);
-
 	fprintf(stderr, "Stopping FM modulation\n");
-
 	for (i = 0; i < req.count; i++)
 		munmap(blocks[i].addr, blocks[i].block.size);	
-
 	ioctl(fd, IIO_BLOCK_FREE_IOCTL, 0);
 	close(fd);
+	//发送解调结束帧
 	gsend(dst,"\xaa\xbb\xcc\xdd\xee\xff",6,cnum);
 	return 0;
 }
