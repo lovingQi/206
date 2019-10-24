@@ -137,7 +137,8 @@ void control_process(void *arg)
 			case 1:
 			{
 				set_dev_paths("ad9361-phy");
-				write_devattr_int("out_altvoltage0_RX_LO_frequency", data*100000+70000000);//data*0.1M +88M
+				write_devattr_int("out_altvoltage0_RX_LO_frequency", data*100000+88000000);//data*0.1M +88M
+				printf("set freq to %d",data*100000+88000000);
 				break;//set fm freq
 			}
 			case 3:fm_cli_num>0?((int *)arg)[1]=2:printf("no client");break;//start fmod 
