@@ -325,6 +325,7 @@ def fmdm():
 def scan_sql():
     global scan                  #scan扫描指令，1扫描；0停止扫描
     global scan_time        #scan_time为扫描停留时间：0（初始值）;扫描时可选10s:80s:10s
+    global current_freq
     scan_time = 0
     while 1:                        #循环查询数据库中 scan 和 scan_time的值
         db = pymysql.connect(
@@ -343,6 +344,14 @@ def scan_sql():
         scan_time = result[0][0]
         cur.close()
         db.close()
+        lines=''
+        try:
+            with open("C:\\inetpub\\wwwroot\\Data\\now_freq.txt",'w',encoding='utf-8') as now_freq_read:
+                lines=now_freq_read.readlines()
+                current_freq=float(lines[0])
+        except:
+            print('get current_freq fail')
+        
 #=================================================================
 fmid=Thread(target=fftp)
 fmid.start()
