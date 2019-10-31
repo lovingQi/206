@@ -1,0 +1,8 @@
+C:\Users\frankzhuo\CloudStation\speech\speech\bin\speech.dll.config
+C:\Users\frankzhuo\CloudStation\speech\speech\bin\speech.dll
+C:\Users\frankzhuo\CloudStation\speech\speech\bin\speech.pdb
+C:\Users\frankzhuo\CloudStation\speech\speech\obj\Debug\speech.csprojAssemblyReference.cache
+C:\Users\frankzhuo\CloudStation\speech\speech\obj\Debug\speech.csproj.CoreCompileInputs.cache
+C:\Users\frankzhuo\CloudStation\speech\speech\obj\Debug\speech.dll
+C:\Users\frankzhuo\CloudStation\speech\speech\obj\Debug\speech.pdb
+C:\Users\frankzhuo\CloudStation\speech\speech\obj\Debug\speech.csproj.CopyComplete
