@@ -1,0 +1,10 @@
+
+ad9365 //与fft相关
+
+iio_fm_radio //与解调相关
+
+iio_utils //iio 相关驱动
+
+main	//主函数
+
+Makefile 
