@@ -18,8 +18,8 @@ import numpy as np
 from aip import AipSpeech
 from threading import Thread
 #初始化
-sql_pwd='cog2019'
-sql_usr='cog2019'
+sql_pwd='lizuguang'
+sql_usr='lizuguang'
 sql_host='127.0.0.1'
 
 APP_ID = '15628658'
@@ -39,8 +39,8 @@ SIG_DM_SAVE=b'xxxxxx'
 
 cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #建立一个基于UDP的Socket
 loc=[]
-freq_list=np.array([88.5])
-current_freq=88.5       #当前频点初始化
+freq_list=np.array([102.5])
+current_freq=102.5       #当前频点初始化
 scan=0
 n = 0
 #================清空数据库===================================
@@ -63,7 +63,7 @@ sql = "delete voice_text from voice_text"
 cur.execute(sql)
 cur.close()
 db.close()
-with open ("now_freq.txt",'w',encoding = 'utf-8') as now_freq_w:
+with open ("C:\\inetpub\\wwwroot\\Data\\now_freq.txt",'w',encoding = 'utf-8') as now_freq_w:
     now_freq_w.truncate()       #清除now_freq.txt中的当前频点，即初始化为空
 #语音识别
 def reco(fname,client,c_freq):
@@ -149,7 +149,7 @@ def fftp():
     database = 'speech',
     charset = "utf8")
     cur = db.cursor()
-    FM_list = [ '88.5','89.7', '93.7', '97.5', '99.7',  '96.6', '102.4', '104.3', '105.8', '101.7', '95.8', '107.5', '98.9', '91.4', '106.9', '102','95.2','103.5','100.5','124.0']
+    FM_list = [ '87.6','88.7', '90.0','90.5','91.5','93.1','96.6', '97.4', '99.6',  '100.6', '101.8', '102.5', '103.9', '106.1', '106.6', '107.3']
     ft = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #建立一个基于TCP的Socket
     ft.connect((HOST_ADDR,10103))
     print('fft connect successful')
@@ -159,10 +159,15 @@ def fftp():
     final_list=np.array([])
     while 1:
         data=ft.recv(4)
+        '''try:
+            with open("C:\\inetpub\\wwwroot\\Data\\now_freq.txt",'w',encoding = 'utf-8') as now_freq_write:
+                now_freq_write.truncate()       #清除now_freq.txt中的当前频点，即初始化为空
+        except:
+            print('now_freq.txt open fail')'''
         if data==SIG_FFTDATA_END:
             if(len(x)==8192):
                 x=np.array(x)
-                loc=np.where(x>2e7)[0]          #loc为频谱数据x>2e7的位置
+                loc=np.where(x[:4096]>3e7)[0]          #loc为频谱数据x>2e7的位置
                 loc=loc/8192*40+88
                 loc=np.around(loc,1)
                 loc=np.unique(loc)
@@ -197,11 +202,10 @@ def fftp():
                 ydata = x[0:4096:2]
                 ydata = 10*np.log10(ydata)
                 try:
-                    freqplot_data_write = open("C:\\inetpub\\wwwroot\\Data\\data.txt",'w',encoding='utf-8')
-                    for i in range(2048):
-                        freqplot_data_write.writelines(str(round(ydata[i],2)))
-                        freqplot_data_write.write(',')
-                    freqplot_data_write.close()
+                    with open("C:\\inetpub\\wwwroot\\Data\\data.txt",'w',encoding='utf-8') as freqplot_data_write:
+                        for i in range(2048):
+                            freqplot_data_write.writelines(str(round(ydata[i],2)))
+                            freqplot_data_write.write(',')
                 except:
                     print('频谱数据写入data.txt文件通道被占用')
             x=[]
@@ -286,7 +290,7 @@ def fmdm():
                         for sd in thd:
                             if(thd[sd].isAlive()):
                                 thd[sd].join()
-                        freq_list=np.array([88.5])                    
+                        freq_list=np.array([102.5])                    
                         cg=Thread(target=change_freq,)
                         cg.start()
                         while(cg.isAlive()):
@@ -324,9 +328,11 @@ def fmdm():
 #========查询数据库scan和 scan_time的值，判断是否执行扫描,及查询扫描时间============
 def scan_sql():
     global scan                  #scan扫描指令，1扫描；0停止扫描
+    global freq_list
     global scan_time        #scan_time为扫描停留时间：0（初始值）;扫描时可选10s:80s:10s
     global current_freq
     scan_time = 0
+    scanl=0
     while 1:                        #循环查询数据库中 scan 和 scan_time的值
         db = pymysql.connect(
         host = sql_host,
@@ -342,15 +348,26 @@ def scan_sql():
         cur.execute(sql)
         result = cur.fetchall()
         scan_time = result[0][0]
-        cur.close()
-        db.close()
+
+        if(scanl!=scan):
+            print('empty')
+            freq_list=np.array([102.5])
+            sql = "DELETE doubtful_freq_list FROM doubtful_freq_list"
+            cur.execute(sql)
+            sql = "DELETE now_list_freq FROM now_list_freq"
+            cur.execute(sql)
+        scanl=scan
         lines=''
         try:
-            with open("C:\\inetpub\\wwwroot\\Data\\now_freq.txt",'w',encoding='utf-8') as now_freq_read:
-                lines=now_freq_read.readlines()
-                current_freq=float(lines[0])
+            size = os.path.getsize("C:\\inetpub\\wwwroot\\Data\\now_freq.txt")
+            if size != 0:
+                with open("C:\\inetpub\\wwwroot\\Data\\now_freq.txt",'r',encoding='utf-8') as now_freq_read:
+                    lines=now_freq_read.readlines()
+                    current_freq=float(lines[0])
         except:
             print('get current_freq fail')
+        cur.close()
+        db.close()
         
 #=================================================================
 fmid=Thread(target=fftp)
@@ -359,4 +376,6 @@ fftid=Thread(target=fmdm)
 fftid.start()
 scan_sqls = Thread(target=scan_sql)
 scan_sqls.start()
+#========防止data.txt文件被破坏====================================
+#open("C:\\inetpub\\wwwroot\\Data\\data.txt",'w',encoding='utf-8').close()
 cmd.sendto(CMD_STOP,CMDDST)
